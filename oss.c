@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <sys/types.h>
+#include <unistd.h>
 #define BILLION 1000000000
 #define INCREMENT 500000
 typedef unsigned int uint;
@@ -30,9 +32,9 @@ int main (int argc, char * argv[])
 
     while ((sec < 2) && (currentprocs < maxprocs))
     {
-        print("Clock is %u:%u\n", sec, nsec);
+        printf("Clock is %u:%u\n", sec, nsec);
         increment_clock(&sec, &nsec);
-        print("The clock is now %u:%u\n", sec, nsec);
+        printf("The clock is now %u:%u\n", sec, nsec);
 //        while (currentprocs >= maxprocs);
         pid = fork();
         currentprocs++;
