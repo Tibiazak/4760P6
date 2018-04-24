@@ -31,6 +31,8 @@ int main (int argc, char * argv[])
     int currentprocs = 0;
     int pid;
     char * argarray[] = {"./user", NULL};
+    int status;
+    pid_t wpid;
 
     while ((sec < 2) && (currentprocs < maxprocs))
     {
