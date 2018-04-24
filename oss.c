@@ -48,5 +48,6 @@ int main (int argc, char * argv[])
             }
         }
     }
+    while ((wpid = wait(&status)) > 0);
     return 0;
 }
