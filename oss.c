@@ -34,7 +34,7 @@ int main (int argc, char * argv[])
     int status;
     pid_t wpid;
 
-    while ((sec < 10) && (currentprocs < maxprocs))
+    while ((sec < 10))
     {
         printf("Clock is %u:%u\n", sec, nsec);
         increment_clock(&sec, &nsec);
