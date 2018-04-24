@@ -11,7 +11,7 @@ void increment_clock(uint *sec, uint *nsec)
 {
     if ((*nsec + INCREMENT) > BILLION)
     {
-        *sec = *sec++;
+        *sec++;
         *nsec = (*nsec + INCREMENT) - BILLION;
     }
     else
@@ -29,6 +29,7 @@ int main (int argc, char * argv[])
     int maxprocs = 5;
     int currentprocs = 0;
     int pid;
+    char * argarray[] = {"./user", NULL};
 
     while ((sec < 2) && (currentprocs < maxprocs))
     {
@@ -40,7 +41,7 @@ int main (int argc, char * argv[])
         currentprocs++;
         if (pid == 0)
         {
-            if(execvp("./user", {"./user", NULL}) < 0) //execute user
+            if(execvp(argarray[0], argarray) < 0) //execute user
             {
                 printf("Execution failed!\n");
                 return 1;
