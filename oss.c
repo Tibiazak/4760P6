@@ -10,7 +10,7 @@ typedef unsigned int uint;
 
 void increment_clock(uint *sec, uint *nsec)
 {
-    if ((*nsec + INCREMENT) > BILLION)
+    if ((*nsec + INCREMENT) >= BILLION)
     {
         *sec = *sec + 1;
         *nsec = (*nsec + INCREMENT) - BILLION;
