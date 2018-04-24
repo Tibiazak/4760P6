@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #define BILLION 1000000000
 #define INCREMENT 500000
 typedef unsigned int uint;
@@ -22,8 +23,8 @@ int main (int argc, char * argv[])
     uint sec = 0;
     uint nsec = 0;
     srand((unsigned) time(&t));
-    maxprocs = 5;
-    currentprocs = 0;
+    int maxprocs = 5;
+    int currentprocs = 0;
     int pid;
 
     while ((sec < 2) && (currentprocs < maxprocs))
@@ -43,5 +44,5 @@ int main (int argc, char * argv[])
             }
         }
     }
-
+    return 0;
 }
