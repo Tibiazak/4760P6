@@ -34,12 +34,12 @@ int main (int argc, char * argv[])
     int status;
     pid_t wpid;
 
-    while ((sec < 2) && (currentprocs < maxprocs))
+    while ((sec < 10) && (currentprocs < maxprocs))
     {
         printf("Clock is %u:%u\n", sec, nsec);
         increment_clock(&sec, &nsec);
         printf("The clock is now %u:%u\n", sec, nsec);
-//        while (currentprocs >= maxprocs);
+        while ((wpid = wait(&status)) >= maxprocs);
         pid = fork();
         currentprocs++;
         if (pid == 0)
