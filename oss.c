@@ -11,7 +11,7 @@ void increment_clock(uint *sec, uint *nsec)
 {
     if ((*nsec + INCREMENT) > BILLION)
     {
-        *sec = *sec++;
+        *sec = *sec + 1;
         *nsec = (*nsec + INCREMENT) - BILLION;
     }
     else
