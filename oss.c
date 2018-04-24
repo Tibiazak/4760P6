@@ -3,6 +3,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/wait.h>
 #define BILLION 1000000000
 #define INCREMENT 500000000
 typedef unsigned int uint;
