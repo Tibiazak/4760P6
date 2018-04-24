@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #define BILLION 1000000000
 #define INCREMENT 500000
 typedef unsigned int uint;
@@ -8,7 +9,7 @@ void increment_clock(uint *sec, uint *nsec)
 {
     if ((*nsec + INCREMENT) > BILLION)
     {
-        *sec++;
+        *sec = *sec++;
         *nsec = (*nsec + INCREMENT) - BILLION;
     }
     else
