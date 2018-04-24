@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #define BILLION 1000000000
-#define INCREMENT 500000
+#define INCREMENT 50000000
 typedef unsigned int uint;
 
 void increment_clock(uint *sec, uint *nsec)
