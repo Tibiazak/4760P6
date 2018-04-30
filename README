@@ -1,0 +1,52 @@
+Joshua Bearden
+ CS 4760 Project 6
+ 
+ This project is incomplete. It is supposed to create processes that will request memory addresses
+ and the OSS will determine if those addresses are valid and simulate paging, while handling a queue of
+ processes blocked on I/O in case of a page fault.
+ 
+ This program contains code for the message queues, the simulated clock, the arrays to hold all the
+ pages, functions to kill the process and all children on interrupt, functions to determine when to
+ launch a new process and basic code to fork a process.
+ 
+ The code that I did not have the time to complete would have done the following:
+ When a process is forked, OSS assigns it a simulated pid and stores its real pid. 
+ The user process then immediately sends a message on the queue type of the simulated pid
+ containing the amount of memory it will "need" from OSS. OSS initializes the page table,
+ and stores in the last element of the page table array the max amount of memory the process will need.
+ 
+ OSS will just loop receiving messages, which will be one of 3 types: initialization (like just described), 
+ termination (in which case OSS will clear out all the "memory" from that process's page table), and requests.
+ A request contains a memory address. OSS will check if the address is less than the max memory the process requested,
+ if it is greater then the request is invalid and OSS will terminate that process. Otherwise, the page table is consulted.
+ If the page containing that address is in memory already, then OSS sends a message back to the process, allowing it to run again.
+ If it is not in memory, then we page fault and OSS blocks the process, storing the pid and the time when the IO is finished.
+ 
+ If our memory is full, we would use the round robin second chance algorithm from the slides - a pointer loops around
+ until it finds the first empty slot or the first slot that hasn't been referenced in a while (and resets reference bits
+ as it does so). Once it either finds a spot that is empty or has an unset reference bit, it swaps out the page.
+ In my algorithm, I was going to use bit_array[256] to be either 0 (if empty) or a number from 1-18 (the simpid of the process
+ which owns that page), and I had two other arrays, one for a dirty bit and one for a reference bit.
+ 
+ Each process would get an int page_table[33]. Index 32 contains the max amount of memory the process needs. The other indexes
+ contain numbers from 0-256, representing the index in bit_array, dirty_bit, and ref_bit for that frame (or -1, if it is in
+ secondary storage). Whenever a page gets referenced, the ref_bit is set to 1; if the memory request is a write, the dirty bit
+ is set and more time gets added to the clock when that page gets swapped out.
+ 
+ For the blocked queue, I would probably implement a struct containing a Clock object (I already defined a clock struct containing
+ two unsigned ints) and another int simpid; and then just create a struct blocked block_queue[18] and simulate queue functionality
+ with a pointer that I move around as needed.
+ 
+ Also, I did not get a chance to code User:
+ First, generate a random number < 32000, send that to OSS.
+ Second, loop: generate a random number with a small chance to make that number an invalid address, decide if its a write or read,
+               send that data to OSS, wait for a message back.
+ Third, have a random (and increasing) chance to terminate during each iteration of the loop.
+ 
+ Final notes:
+ 
+ If I'd had an extra weekend that I didn't have to work, I could probably have finished this without much issue. More so
+ than several of my other projects, I understand this one and it's totally doable - if I didn't have other unavoidable commitments
+ at the same time. As a result, the code I'm submitting is almost certainly not going to compile, as its there more for you to see
+ what I was doing and where it's going - I'm commenting it as fully as I explained everything in this readme so it should be fairly
+ easy to read the code.
