@@ -1,23 +1,16 @@
 /*
  * Joshua Bearden
- * CS 4760 Project 3
- * Message queues & a simulated clock
+ * CS 4760 Project 6
+ * 4-29-18
  *
- * This is a program to simulate the basic functions of an OS.
- * We fork child processes, they enter a mutually exclusive critical section (via message queues)
- * and increment a "clock". Then when they terminate they send a message to the parent.
- * The parent will, on receipt of this message, increment the "clock" and fork another process, all while
- * logging its simulated times and activities.
+ * This project is incomplete. It is supposed to create processes that will request memory addresses
+ * and the OSS will determine if those addresses are valid and simulate paging, while handling a queue of
+ * processes blocked on I/O in case of a page fault.
  *
- * Functions used:
- * Interrupt: A signal handler to catch SIGALRM and SIGINT and terminate all the processes cleanly.
+ * This program contains code for the message queues, the simulated clock, the arrays to hold all the
+ * pages, functions to kill the process and all children on interrupt, functions to determine when to
+ * launch a new process and basic code to fork a process.
  *
- * SetInterrupt: A function that registers Interrupt as the signal handler for SIGALRM and SIGINT.
- *
- * SetPeriodic: A function that sets up a timer to go off in a user-specified number of real-time seconds.
- *
- * In this program I did get 4 lines of code (in user.c) from StackOverflow (cited directly above said lines of code).
- * The code is a simple solution for allowing random numbers to be generated > RAND_MAX without introducing bias.
  */
 #include <stdio.h>
 #include <sys/types.h>
@@ -37,9 +30,6 @@
 #include <stdbool.h>
 
 
-//#define SHAREKEY 92195
-//#define SHAREKEYSTR "92195"
-//#define TIMER_MSG "Received timer interrupt!\n"
 #define MSGKEY 110992
 #define MSGKEYSTR "110992"
 #define BILLION 1000000000
@@ -70,8 +60,6 @@ static void interrupt(int signo, siginfo_t *info, void *context)
     errno = errsave;
     signal(SIGUSR1, SIG_IGN);
     kill(-1*getpid(), SIGUSR1);
-//    shmdt(Clock);
-//    shmctl(ClockID, IPC_RMID, NULL);
     msgctl(MsgID, IPC_RMID, NULL);
     fclose(fp);
     exit(1);
@@ -91,68 +79,55 @@ static int setinterrupt()
     return 0;
 }
 
+// A function that determines if some target time has passed.
 int hasTimePassed(struct clock current, struct clock dest)
 {
-    if (dest.sec > current.sec)
+    if (dest.sec > current.sec)  // if destination.sec is greater than current.sec, it's definitely later
     {
         return 1;
     }
-    else if (dest.sec == current.sec)
+    else if (dest.sec == current.sec) // otherwise if the seconds are equal, check the nanoseconds
     {
-        if (dest.nsec >= current.nsec)
+        if (dest.nsec >= current.nsec) // if destination ns is greater, it's later
         {
             return 1;
         }
     }
-    return 0;
+    return 0;  // otherwise, time has not passed, return false
 }
 
+// A function to get a random time between 0 and 500 milliseconds from now
 struct clock getNextProcTime(struct clock c)
 {
+    // get a random number between 0 and 500 milliseconds
     nsecs = rand() % (500 * MILLISEC);
+
+    // make a new clock object initialized to the current time
     struct clock newClock;
     newClock.nsec = c.nsec;
     newClock.sec = c.sec;
+
+    // if adding the randomly generated amount of time causes us to move to the next second, increment sec
     if ((newClock.nsec + nsecs) >= BILLION)
     {
         newClock.sec = newClock.sec + 1;
         newClock.nsec = nsecs - BILLION;
     }
-    else
+    else // otherwise, just add to nsec
     {
         newClock.nsec = newClock.nsec + nsecs;
     }
-    return newClock;
+    return newClock; // return the new clock object
 }
 
 
-// A function that sets up a timer to go off after a specified number of seconds
-// The timer only goes off once
-//static int setperiodic(double sec)
-//{
-//    timer_t timerid;
-//    struct itimerspec value;
-//
-//    if (timer_create(CLOCK_REALTIME, NULL, &timerid) == -1)
-//    {
-//        return -1;
-//    }
-//    value.it_value.tv_sec = (long)sec;
-//    value.it_value.tv_nsec = 0;
-//    value.it_interval.tv_sec = 0;
-//    value.it_interval.tv_nsec = 0;
-//    return timer_settime(timerid, 0, &value, NULL);
-//}
-
-
 int main(int argc, char * argv[]) {
-    int i, pid, c, status;
+
+    // initialize all the variables
+    int i, pid, c, status, memory;
     int maxprocs = 0;
-//    int endtime = 20;
     int pr_count = 0;
     int totalprocs = 0;
-//    char *argarray[] = {"./user", SHAREKEYSTR, MSGKEYSTR, NULL};
-    char *argarray[] = {"./user", MSGKEYSTR, NULL};
     char *filename;
     pid_t wait = 0;
     bool timeElapsed = false;
@@ -165,10 +140,15 @@ int main(int argc, char * argv[]) {
     int dirty_bit[256];
     int ref_bit[256];
     struct clock Clock;
+
+    struct clock endTime;
+    endTime.nsec = 0;
+    endTime.sec = MAX_SECONDS;
+
+    // seed the random number generator with the process pid
     srand(getpid());
 
-
-
+    // initialize all the arrays
     for (i = 0; i < 256; i++)
     {
         bit_array[i] = 0;
@@ -226,7 +206,7 @@ int main(int argc, char * argv[]) {
         return(1);
     }
 
-    if(maxprocs == 0)
+    if(maxprocs == 0) // ensure max processes was passed
     {
         printf("Error! Must specify the number of processes with the -s flag, please run ./oss -h for more info.\n");
         return(1);
@@ -240,27 +220,6 @@ int main(int argc, char * argv[]) {
         return 1;
     }
 
-//    if (setperiodic((long) endtime) == -1)
-//    {
-//        perror("Failed to set up timer");
-//        return 1;
-//    }
-
-
-//    // Allocate & attach shared memory for the clock
-//    ClockID = shmget(SHAREKEY, sizeof(int), 0777 | IPC_CREAT);
-//    if(ClockID == -1)
-//    {
-//        perror("Master shmget");
-//        exit(1);
-//    }
-
-//    Clock = (struct clock *)(shmat(ClockID, 0, 0));
-//    if(Clock == -1)
-//    {
-//        perror("Master shmat");
-//        exit(1);
-//    }
 
     // initialize the clock
     Clock.sec = 0;
@@ -272,31 +231,83 @@ int main(int argc, char * argv[]) {
     // open file
     fp = fopen(filename, "w");
 
-    // Fork processes
-//    for (i = 0; i < maxprocs; i++)
-//    {
-//        pid = fork();
-//        pr_count++;
-//        totalprocs++;
-//        if(pid == 0)
-//        {
-//            if(execvp(argarray[0], argarray) < 0) //execute user
-//            {
-//                printf("Execution failed!\n");
-//                return 1;
-//            }
-//        } else if(pid < 0) {
-//            printf("Fork failed!\n");
-//            return 1;
-//        }
-//        // output process creation to file
-//        fprintf(fp, "Master: Creating child process %d at my time %d.%d\n", pid, Clock.sec, Clock.nsec);
-//    }
+    // create the pid_array now that we know the max processes
+    int pid_array[maxprocs+1];
+
+    // initialize simpid variable and the string to allow us to pass simpid as an argument to a child proc
+    int simpid;
+    char stringSimPid[5];
+
+    // get the next time to launch a process
+    struct clock nextproc;
+    nextproc = getNextProcTime(Clock);
+
+    // while we haven't hit the end time for the program
+    while(!hasTimePassed(Clock, endTime))
+    {
+        // if its time to fork a new process
+        if (hasTimePassed(Clock, nextproc))
+        {
+            // if we still have room to fork a new process
+            if (pr_count < maxprocs)
+            {
+                // increment the process count
+                pr_count = pr_count + 1;
+
+                // find the next empty spot in the pid_array, save that index as simpid
+                for (i = 1; i < maxprocs + 1; i++)
+                {
+                    if (pid_array[i] == 0)
+                    {
+                        simpid = i;
+                    }
+                }
+
+                // convert simpid to a string
+                sprintf(stringSimPid, "%i", simpid);
+
+                // fork the process
+                pid = fork();
+                if (pid == 0) // if this is the child, exec user
+                {
+                    char *argarray[] = {"./user", MSGKEYSTR, stringSimPid, NULL}; // pass message queue key and simpid
+                    if (execvp(argarray[0], argarray) < 0)
+                    {
+                        printf("Execution failed!\n"); // if we ever get here, exec failed
+                        return 1;
+                    }
+                } else if (pid < 0) // if pid is negative, fork failed
+                {
+                    printf("Fork failed!\n");
+                    return 1;
+                }
+                // only the parent executes this - store the child's pid in the pid_array at index simpid
+                pid_array[simpid] = pid;
+
+                // log process creation
+                fprintf(fp, "Master: Creating child process %d at my time %d.%d\n", pid, Clock.sec, Clock.nsec);
+            }
+            // get the next time to launch a process
+            nextproc = getNextProcTime(Clock);
+        }
+        // check if all procs are blocked
+
+
+        // receive a message
+        msgrcv(MsgID, &message, sizeof(message), 0, 0);
+
+        // check if its initalization, termination, or request
+
+        // if initalization, initialize page table
+
+        // if termination, clear memory
+
+        // if request, check if valid, handle
+
+    }
 
     // we're done, detach and free shared memory and close the file
     // then send a kill signal to the children and wait for them to exit
-//    shmdt(Clock);
-//    shmctl(ClockID, IPC_RMID, NULL);
     msgctl(MsgID, IPC_RMID, NULL);
     fclose(fp);
     signal(SIGUSR1, SIG_IGN);
@@ -312,59 +323,3 @@ int main(int argc, char * argv[]) {
     printf("Exiting normally\n");
     return 0;
 }
-//#include <stdlib.h>
-//#include <stdio.h>
-//#include <time.h>
-//#include <sys/types.h>
-//#include <unistd.h>
-//#include <sys/wait.h>
-//#define BILLION 1000000000
-//#define INCREMENT 500000000
-//typedef unsigned int uint;
-//
-//void increment_clock(uint *sec, uint *nsec)
-//{
-//    if ((*nsec + INCREMENT) >= BILLION)
-//    {
-//        *sec = *sec + 1;
-//        *nsec = (*nsec + INCREMENT) - BILLION;
-//    }
-//    else
-//    {
-//        *nsec += INCREMENT;
-//    }
-//}
-//
-//int main (int argc, char * argv[])
-//{
-//    time_t t;
-//    uint sec = 0;
-//    uint nsec = 0;
-//    srand((unsigned) time(&t));
-//    int maxprocs = 5;
-//    int currentprocs = 0;
-//    int pid;
-//    char * argarray[] = {"./user", NULL};
-//    int status;
-//    pid_t wpid;
-//
-//    while (sec < 2)
-//    {
-//        printf("Clock is %u:%u\n", sec, nsec);
-//        increment_clock(&sec, &nsec);
-//        printf("The clock is now %u:%u\n", sec, nsec);
-//        while ((wpid = wait(&status)) >= maxprocs);
-//        pid = fork();
-//        currentprocs++;
-//        if (pid == 0)
-//        {
-//            if(execvp(argarray[0], argarray) < 0) //execute user
-//            {
-//                printf("Execution failed!\n");
-//                return 1;
-//            }
-//        }
-//    }
-//    while ((wpid = wait(&status)) > 0);
-//    return 0;
-//}
